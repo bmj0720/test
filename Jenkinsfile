@@ -1,13 +1,29 @@
-def image_tag = "caicloud/kubernetes-admin:${params.imageTag}"
-def registry = "cargo.caicloudprivatetest.com"
+//Jenkins Kubenetes Plugin 插件地址: https://github.com/jenkinsci/kubernetes-plugin
+// 这个插件目前只支持 pipeline, 需要先在 Jenkins master 中添加一个新的 kubernetes 的 cloud, 配置完成就是做一些集群的配置
+// Manage Jenkins -> Configure System -> add a new cloud
 
+// 注意其中几项
+// Jenkins URL: 需要是 master 的 url, 必须带 http
+// Jenkins tunnel: 是 jnlp slave 访问 master 的 url, 默认端口是50000, 这个一定不能带http
+// Container Cap: 这个值并不是字面上看起来的意思, 它表示这个 k8s 的 cloud 最多同时能提供多少个 slave/agent
+// Kubernetes server certificate key: X509 PEM encoded, 不能有换行, 不能有头尾, 就是一个字符串
+
+def image_tag = "caicloud/test:${params.imageTag}"
+def registry = "cargo.caicloudprivatetest.com"
+//运行了一个叫podTemplate的step, 
+//定义了这个step运行在`dev-cluster`的cloud上面, 名字叫`dev-cluster`, 
+//label是`kubernetes-admin`, podTemplate step并不会去创建pod, 它只是定义了一个podTemplate, 注册到cloud中
 podTemplate(
-    cloud: 'dev-cluster',
+    cloud: 'dev-cluster',// 这个值对应了上面创建的k8s cloud名字, 如果不填默认会使用kubernetes这个名字
     namespace: 'kube-system',
-    name: 'kubernetes-admin',
-    label: 'kubernetes-admin',
-    instanceCap: 1,
+    name: 'kubernetes-admin',// 这个名字会影响到slave的名字, slave实际名字是kube-system-${UUID}
+    // 这个地方是一个trick, 一旦遇到always-或者always_开头的label
+    // 则表示这个pod是一个长期运行的pod, retentionStrategy改为Always, 长期存在
+    label: 'kubernetes-admin',// 这个最重要, 可以说是唯一标示
+    instanceCap: 1,// 这个表示这个pod template在k8s集群中最多同时可以有几个实例
+    //nodeSelector: "os=centos,lg=golang", // k8s node selector
     idleMinutes: 1440,
+    // 下面这个Container是这个插件强制要求启动的, 是一个jnlp-slave, 用来跟master通讯
     containers: [
         // jnlp with kubectl
         containerTemplate(
@@ -15,7 +31,7 @@ podTemplate(
             alwaysPullImage: true,
             image: 'cargo.caicloud.io/circle/jnlp:2.62',
             command: '',
-            args: '${computer.jnlpmac} ${computer.name}',
+            args: '${computer.jnlpmac} ${computer.name}',// 强制要求这么写
         ),
         // docker in docker
         containerTemplate(
@@ -24,7 +40,7 @@ podTemplate(
             ttyEnabled: true, 
             command: '', 
             args: '--host=unix:///home/jenkins/docker.sock',
-            privileged: true,
+            privileged: true,// docker in docker 要求privileged模式
         ),
         // golang with docker client
         containerTemplate(
@@ -44,7 +60,7 @@ podTemplate(
         ),
     ]
 ) {
-    node('test') {
+    node('kubernetes-admin') {// 这个地方表面使用demo-job-echo的标签的node
         stage('Checkout') {
             checkout scm
         }
