@@ -1,4 +1,4 @@
-def image_tag = "caicloud/test:${params.imageTag}"
+def image_tag = "caicloud/kubernetes-admin:${params.imageTag}"
 def registry = "cargo.caicloudprivatetest.com"
 
 podTemplate(
@@ -60,8 +60,8 @@ podTemplate(
 
                         # if you do not remove target dir manually
                         # ln will not work according to what you want
-                        # ln link /home/jenkins/workspace/xxxx to /go/src/github.com/caicloud/cyclone at first time
-                        # ln will link /home/jenkins/workspace/xxxx to /go/src/github.com/caicloud/cyclone/xxxx at second time
+                        # ln link /home/jenkins/workspace/xxxx to /go/src/github.com/caicloud/baomengjiang at first time
+                        # ln will link /home/jenkins/workspace/xxxx to /go/src/github.com/caicloud/baomengjiang/xxxx at second time
                         # so remove the target workdir before you link
                         rm -rf ${WORKDIR}
                         ln -sfv $(pwd) ${WORKDIR}
