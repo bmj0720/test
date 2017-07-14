@@ -6,6 +6,7 @@ podTemplate(
     namespace: 'kube-system',
     name: 'kubernetes-admin',
     label: 'kubernetes-admin',
+    instanceCap: 1,
     idleMinutes: 1440,
     containers: [
         // jnlp with kubectl
@@ -68,7 +69,7 @@ podTemplate(
                         cd ${WORKDIR}
 
                         echo "buiding test"
-                        GOOS=linux GOARCH=amd64 go build -o test cmd/admin/main.go
+                        GOOS=linux GOARCH=amd64 go build -o test
                     ''')
                 }
 
@@ -103,7 +104,7 @@ podTemplate(
                     withCredentials ([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'baomengjiang', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]){
                         sh("git config --global user.email \"info@caicloud.io\"")
                         sh("git tag -a $imageTag -m \"$tagDescribe\"")
-                        sh("git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/caicloud/kubernetes-admin $imageTag")
+                        sh("git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/baomengjiang/test $imageTag")
                    }
                 } 
             }
