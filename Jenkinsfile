@@ -70,73 +70,73 @@ podTemplate(
         stage('Run shell') {
             sh 'echo hello world'
         }
-        stage('Checkout') {
-            checkout scm
-        }
-        container('golang') {
-            ansiColor('xterm') {
+        // stage('Checkout') {
+        //     checkout scm
+        // }
+        // container('golang') {
+        //     ansiColor('xterm') {
 
-                stage("Complie") {
-                    sh('''
-                        set -e 
-                        mkdir -p $(dirname ${WORKDIR}) 
+        //         stage("Complie") {
+        //             sh('''
+        //                 set -e 
+        //                 mkdir -p $(dirname ${WORKDIR}) 
 
-                        echo "clean previous build garbage"
+        //                 echo "clean previous build garbage"
 
-                        # if you do not remove target dir manually
-                        # ln will not work according to what you want
-                        # ln link /home/jenkins/workspace/xxxx to /go/src/github.com/caicloud/baomengjiang at first time
-                        # ln will link /home/jenkins/workspace/xxxx to /go/src/github.com/caicloud/baomengjiang/xxxx at second time
-                        # so remove the target workdir before you link
-                        rm -rf ${WORKDIR}
-                        ln -sfv $(pwd) ${WORKDIR}
+        //                 # if you do not remove target dir manually
+        //                 # ln will not work according to what you want
+        //                 # ln link /home/jenkins/workspace/xxxx to /go/src/github.com/caicloud/baomengjiang at first time
+        //                 # ln will link /home/jenkins/workspace/xxxx to /go/src/github.com/caicloud/baomengjiang/xxxx at second time
+        //                 # so remove the target workdir before you link
+        //                 rm -rf ${WORKDIR}
+        //                 ln -sfv $(pwd) ${WORKDIR}
 
-                        cd ${WORKDIR}
+        //                 cd ${WORKDIR}
 
-                        echo "buiding test"
-                        GOOS=linux GOARCH=amd64 go build -o test
-                    ''')
-                }
+        //                 echo "buiding test"
+        //                 GOOS=linux GOARCH=amd64 go build -o test
+        //             ''')
+        //         }
 
-                stage('Run e2e test') {
-                    if (!params.integration) {
-                        echo "skip integration"
-                        return
-                    }
-                    sh('''
-                        set -e
-                        cd ${WORKDIR}
-                        # get host ip
-                        HOST_IP=$(ifconfig eth0 | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')
+        //         stage('Run e2e test') {
+        //             if (!params.integration) {
+        //                 echo "skip integration"
+        //                 return
+        //             }
+        //             sh('''
+        //                 set -e
+        //                 cd ${WORKDIR}
+        //                 # get host ip
+        //                 HOST_IP=$(ifconfig eth0 | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')
                         
-                        export CDS_SERVER="http://cds-server.default:9000"
+        //                 export CDS_SERVER="http://cds-server.default:9000"
 
-                        echo "run E2E script"
-                        /bin/bash tests/run-e2e.sh
-                    ''')
-                }
-            }
+        //                 echo "run E2E script"
+        //                 /bin/bash tests/run-e2e.sh
+        //             ''')
+        //         }
+        //     }
 
-            stage("Build image and publish") {
-                if (!params.publish) {
-                    echo "skip publish"
-                    return
-                }
-                sh "docker build -t ${image_tag} -f Dockerfile ."
-                echo "skip push"
-                if (params.autoGitTag) {
-                    echo "auto git tag: " + params.imageTag
-                    withCredentials ([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'bmj', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]){
-                        sh("git config --global user.email \"info@caicloud.io\"")
-                        sh("git tag -a $imageTag -m \"$tagDescribe\"")
-                        sh("git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/baomengjiang/test $imageTag")
-                   }
-                } 
-            }
-        }
+        //     stage("Build image and publish") {
+        //         if (!params.publish) {
+        //             echo "skip publish"
+        //             return
+        //         }
+        //         sh "docker build -t ${image_tag} -f Dockerfile ."
+        //         echo "skip push"
+        //         if (params.autoGitTag) {
+        //             echo "auto git tag: " + params.imageTag
+        //             withCredentials ([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'bmj', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]){
+        //                 sh("git config --global user.email \"info@caicloud.io\"")
+        //                 sh("git tag -a $imageTag -m \"$tagDescribe\"")
+        //                 sh("git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/baomengjiang/test $imageTag")
+        //            }
+        //         } 
+        //     }
+        // }
 
-        stage("deploy") {
-            echo "skip deploy"
-        }
+        // stage("deploy") {
+        //     echo "skip deploy"
+        // }
     }
 }
