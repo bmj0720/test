@@ -69,7 +69,7 @@ podTemplate(
     node('test') {// 这个地方表面使用demo-job-echo的标签的node
         stage('Checkout') {
             sh 'echo hello world'
-            checkout scm
+            // checkout scm
         }
         // container('golang') {
         //     ansiColor('xterm') {
