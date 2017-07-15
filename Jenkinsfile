@@ -8,6 +8,11 @@
 // Container Cap: 这个值并不是字面上看起来的意思, 它表示这个 k8s 的 cloud 最多同时能提供多少个 slave/agent
 // Kubernetes server certificate key: X509 PEM encoded, 不能有换行, 不能有头尾, 就是一个字符串
 
+// JENKINS_URL: Jenkins web interface url
+// JENKINS_JNLP_URL: url for the jnlp definition of the specific slave
+// JENKINS_SECRET: the secret key for authentication
+// JENKINS_NAME: the name of the Jenkins agent
+
 def image_tag = "caicloud/kubernetes-admin:${params.imageTag}"
 def registry = "cargo.caicloudprivatetest.com"
 //运行了一个叫podTemplate的step, 
@@ -19,25 +24,26 @@ podTemplate(
     name: 'kubernetes-admin',//The name of the pod.  这个名字会影响到slave的名字, slave实际名字是kube-system-${UUID}
     // 这个地方是一个trick, 一旦遇到always-或者always_开头的label
     // 则表示这个pod是一个长期运行的pod, retentionStrategy改为Always, 长期存在
-    label: 'test',// The label of the pod. 这个最重要, 可以说是唯一标示
+    label: 'test',// The label of the pod. 这个最重要, 可以说是唯一标示     是否同node的label？？？
     instanceCap: 1,// 这个表示这个pod template在k8s集群中最多同时可以有几个实例
     //nodeSelector: "os=centos,lg=golang", // k8s node selector
-    idleMinutes: 1440,
+    //idleMinutes: 1440,
     // 下面这个Container是这个插件强制要求启动的, 是一个jnlp-slave, 用来跟master通讯
     containers: [//The container templates that are use to create the containers of the pod (see below). 用于创建pod容器的容器模板
         // jnlp with kubectl
         containerTemplate(
-            name: 'jnlp',
+            name: 'jnlp',//Jenkins JNLP代理服务 jenkins自带一个 此处进行了覆盖
             alwaysPullImage: true,
             image: 'cargo.caicloud.io/circle/jnlp:2.62',
             command: '',
             args: '${computer.jnlpmac} ${computer.name}',// 强制要求这么写
+            //ports Expose ports on the container.
         ),
         // docker in docker
         containerTemplate(
             name: 'dind', 
             image: 'cargo.caicloud.io/caicloud/docker:17.03-dind', 
-            ttyEnabled: true, 
+            ttyEnabled: true, //Flag to mark that tty should be enabled.
             command: '', 
             args: '--host=unix:///home/jenkins/docker.sock',
             privileged: true,// docker in docker 要求privileged模式
@@ -49,7 +55,7 @@ podTemplate(
             ttyEnabled: true,
             command: '',
             args: '',
-            envVars: [
+            envVars: [//补充的环境变量
                 containerEnvVar(key: 'DEBUG', value: 'true'),
                 containerEnvVar(key: 'NOT_LOCAL', value: 'true'),
                 containerEnvVar(key: 'IMAGE', value: "${registry}/${image_tag}"),
@@ -61,6 +67,9 @@ podTemplate(
     ]
 ) {
     node('test') {// 这个地方表面使用demo-job-echo的标签的node
+        stage('Run shell') {
+            sh 'echo hello world'
+        }
         stage('Checkout') {
             checkout scm
         }
