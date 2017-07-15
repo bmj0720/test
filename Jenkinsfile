@@ -92,7 +92,7 @@ podTemplate(
                         cd ${WORKDIR}
 
                         echo "buiding test"
-                        GOOS=linux GOARCH=amd64 go build -o -i test
+                        GOOS=linux GOARCH=amd64 go build -o test
                     ''')
                 }
 
