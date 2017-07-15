@@ -92,7 +92,7 @@ podTemplate(
                         cd ${WORKDIR}
 
                         echo "buiding test"
-                        GOOS=linux GOARCH=amd64 go build -o test
+                        GOOS=linux GOARCH=amd64 go build -o -i test
                     ''')
                 }
 
@@ -107,7 +107,7 @@ podTemplate(
                         # get host ip
                         HOST_IP=$(ifconfig eth0 | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')
                         
-                        export CDS_SERVER="http://cds-server.default:9000"
+                        export CDS_SERVER="http://cds-server.default:8888"
 
                         echo "run E2E script"
                         /bin/bash tests/run-e2e.sh
