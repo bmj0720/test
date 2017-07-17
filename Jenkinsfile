@@ -111,7 +111,7 @@ podTemplate(
                          pwd
                          echo "Run e2e test"
                          
-                         ./test
+                         ./test &
                          
                      ''')
                     //# get host ip
