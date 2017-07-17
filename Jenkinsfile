@@ -107,6 +107,7 @@ podTemplate(
                          set -e
                          cd ${WORKDIR}
                          # get host ip
+                         echo "start ./test"
                          ./test
                          
                         
