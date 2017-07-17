@@ -105,6 +105,8 @@ podTemplate(
                      }
                      sh('''
                          set -e
+                         ln -sfv $(pwd) ${WORKDIR}
+                         pwd
                          cd ${WORKDIR}
                          
                          pwd
