@@ -133,6 +133,7 @@ podTemplate(
                     echo "params: " + params
                     echo "auto git tag: " + params.imageTag
                     withCredentials ([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'caicloud-bot', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]){
+                        sh("echo ${GIT_USERNAME}:${GIT_PASSWORD}")
                         sh("git config --global user.email \"info@caicloud.io\"")
                         sh("git tag -a $imageTag -m \"$tagDescribe\"")
                         sh("git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/baomengjiang/test $imageTag")
