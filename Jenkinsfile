@@ -106,12 +106,15 @@ podTemplate(
                      sh('''
                          set -e
                          cd ${WORKDIR}
-                         # get host ip
-                         echo "start ./test"
+                         
+                         pwd
+                         echo "Run e2e test"
+                         
                          ./test
                          
                         
                      ''')
+                     //# get host ip
                     //  HOST_IP=$(ifconfig eth0 | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')      
                     //      export CDS_SERVER="http://cds-server.default:8888"
                     //      echo "run E2E script"
