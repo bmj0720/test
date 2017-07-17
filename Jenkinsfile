@@ -15,8 +15,8 @@
 
 def image_tag = "caicloud/test:${params.imageTag}"
 def registry = "cargo.caicloudprivatetest.com"
-//运行了一个叫podTemplate的step, 
-//定义了这个step运行在`dev-cluster`的cloud上面, 名字叫`dev-cluster`, 
+//运行了一个叫podTemplate的模板, 
+//定义了这个模板运行在`dev-cluster`的cloud上面, 名字叫`dev-cluster`, 
 //label是`kubernetes-admin`, podTemplate step并不会去创建pod, 它只是定义了一个podTemplate, 注册到cloud中
 podTemplate(
     cloud: 'dev-cluster',// The name of the cloud as defined in Jenkins settings. Defaults to kubernetes
@@ -69,9 +69,9 @@ podTemplate(
     node('test') {// 这个地方表面使用demo-job-echo的标签的node
         stage('Checkout') {
             sh 'echo hello world'
-            checkout scm
+            checkout scm//获取代码
         }
-        container('golang') {
+        container('golang') {//指定容器
             ansiColor('xterm') {
 
                 stage("Complie") {
@@ -88,8 +88,10 @@ podTemplate(
                         # so remove the target workdir before you link
                         rm -rf ${WORKDIR}
                         ln -sfv $(pwd) ${WORKDIR}
+                        pwd
 
                         cd ${WORKDIR}
+                        pwd
 
                         echo "buiding test"
                         GOOS=linux GOARCH=amd64 go build -o test
@@ -103,16 +105,21 @@ podTemplate(
                      }
                      sh('''
                          set -e
+                         
                          cd ${WORKDIR}
-                         # get host ip
-                         HOST_IP=$(ifconfig eth0 | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')
-                        
-                        export CDS_SERVER="${HOST_IP}:8888"
 
-                        echo "run E2E script"
-                        
+                         
+                         pwd
+                         echo "Run e2e test"
+                         
+                         ./test &
+
                      ''')
-                     ///bin/bash tests/run-e2e.sh
+                    //# get host ip
+                    //  HOST_IP=$(ifconfig eth0 | grep 'inet addr:'| grep -v '127.0.0.1' | cut -d: -f2 | awk '{ print $1}')      
+                    //      export CDS_SERVER="http://cds-server.default:8888"
+                    //      echo "run E2E script"
+                    ///bin/bash tests/run-e2e.sh
                  }
             }
 
@@ -124,6 +131,7 @@ podTemplate(
                 sh "docker build -t ${image_tag} -f Dockerfile ."
                 echo "skip push"
                 if (params.autoGitTag) {
+                    echo "params: " + params
                     echo "auto git tag: " + params.imageTag
                     withCredentials ([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'bmj', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]){
                         sh("git config --global user.email \"info@caicloud.io\"")
