@@ -51,7 +51,8 @@ podTemplate(
         // golang with docker client
         containerTemplate(
             name: 'golang',
-            image: 'cargo.caicloud.io/caicloud/golang-test-bmj:v0.0.1',
+            //image: 'cargo.caicloud.io/caicloud/golang-docker:1.8-17.03',
+            image: 'cargo.caicloud.io/caicloud/golang-test-bmj:v0.0.2',
             ttyEnabled: true,
             command: '',
             args: '',
