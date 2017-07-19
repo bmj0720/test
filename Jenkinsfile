@@ -27,7 +27,7 @@ podTemplate(
     label: 'test',// The label of the pod. 这个最重要, 可以说是唯一标示     是否同node的label？？？
     instanceCap: 1,// 这个表示这个pod template在k8s集群中最多同时可以有几个实例
     //nodeSelector: "os=centos,lg=golang", // k8s node selector
-    //idleMinutes: 1440,
+    idleMinutes: 1440,
     // 下面这个Container是这个插件强制要求启动的, 是一个jnlp-slave, 用来跟master通讯
     containers: [//The container templates that are use to create the containers of the pod (see below). 用于创建pod容器的容器模板
         // jnlp with kubectl
