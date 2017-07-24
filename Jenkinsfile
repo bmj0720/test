@@ -21,13 +21,13 @@ def registry = "cargo.caicloudprivatetest.com"
 podTemplate(
     cloud: 'dev-cluster',// The name of the cloud as defined in Jenkins settings. Defaults to kubernetes
     namespace: 'kube-system',//The namespace of the pod.
-    name: 'test',//The name of the pod.  这个名字会影响到slave的名字, slave实际名字是kube-system-${UUID}
+    name: 'test-bmj',//The name of the pod.  这个名字会影响到slave的名字, slave实际名字是test-${UUID}
     // 这个地方是一个trick, 一旦遇到always-或者always_开头的label
     // 则表示这个pod是一个长期运行的pod, retentionStrategy改为Always, 长期存在
-    label: 'test',// The label of the pod. 这个最重要, 可以说是唯一标示     是否同node的label？？？
+    label: 'test-bmj',// The label of the pod. 这个最重要, 可以说是唯一标示     是否同node的label？？？
     instanceCap: 1,// 这个表示这个pod template在k8s集群中最多同时可以有几个实例
     //nodeSelector: "os=centos,lg=golang", // k8s node selector
-    //idleMinutes: 1440,
+    idleMinutes: 1440,
     // 下面这个Container是这个插件强制要求启动的, 是一个jnlp-slave, 用来跟master通讯
     containers: [//The container templates that are use to create the containers of the pod (see below). 用于创建pod容器的容器模板
         // jnlp with kubectl
@@ -51,7 +51,8 @@ podTemplate(
         // golang with docker client
         containerTemplate(
             name: 'golang',
-            image: 'cargo.caicloud.io/caicloud/golang-docker:1.8-17.03',
+            //image: 'cargo.caicloud.io/caicloud/golang-docker:1.8-17.03',
+            image: 'cargo.caicloud.io/caicloud/golang-test-bmj:v0.0.2',
             ttyEnabled: true,
             command: '',
             args: '',
@@ -66,7 +67,7 @@ podTemplate(
         ),
     ]
 ) {
-    node('test') {// 这个地方表面使用demo-job-echo的标签的node
+    node('test-bmj') {// 这个地方表面使用demo-job-echo的标签的node
         stage('Checkout') {
             sh 'echo hello world'
             checkout scm//获取代码
@@ -134,6 +135,7 @@ podTemplate(
                     echo "params: " + params
                     echo "auto git tag: " + params.imageTag
                     withCredentials ([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'bmj', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]){
+                        sh("echo ${GIT_USERNAME}:${GIT_PASSWORD}")
                         sh("git config --global user.email \"info@caicloud.io\"")
                         sh("git tag -a $imageTag -m \"$tagDescribe\"")
                         sh("git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/baomengjiang/test $imageTag")
