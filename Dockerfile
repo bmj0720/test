@@ -1,7 +1,15 @@
-FROM alpine
-MAINTAINER baomengjiang bmj0720@163.com
-COPY ./test /test
+FROM cargo.caicloud.io/caicloud/golang-docker:1.8-17.03
+#MAINTAINER baomengjiang bmj0720@163.com
 
-EXPOSE 8888
+#RUN apt-get update && apt-get install -y --no-install-recommends git
+RUN apk update && apk add git
+ # apt-get clean && \
+# 删除包缓存中的所有包
+ # rm -rf /var/lib/apt/lists/*
 
-CMD ["/test"]
+#COPY ./test /test
+
+#EXPOSE 8888
+
+#CMD echo hello world
+#CMD ["/test"]
