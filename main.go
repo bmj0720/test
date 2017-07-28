@@ -26,6 +26,7 @@ type InnerJob struct {
 	Color string `json:"color"`
 }
 
+//
 func main() {
 	// cliTest()
 	// beego.Run()
