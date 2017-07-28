@@ -27,7 +27,7 @@ type InnerJob struct {
 }
 
 func main() {
-	cliTest()
+	// cliTest()
 	// beego.Run()
 	// TestInit()
 	// // TestGetAllJobs()
@@ -52,7 +52,6 @@ func TestGetAllJobs() {
 	}
 	getFolderJobs(jobs, "", "")
 	fmt.Println(s)
-
 }
 
 func getFolderJobs(jobs []gojenkins.InnerJob, prefix string, nodeName string) {
@@ -270,9 +269,7 @@ func createXml() []byte {
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
-
 	// os.Stdout.Write([]byte(xml.Header))
-
 	//  os.Stdout.Write(output)
 	return output
 }
