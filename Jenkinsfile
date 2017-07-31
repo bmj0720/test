@@ -95,7 +95,7 @@ podTemplate(
                         pwd
 
                         echo "buiding test"
-                        GOOS=linux GOARCH=amd64 go build -o test
+                        # GOOS=linux GOARCH=amd64 go build -o test
                     ''')
                 }
 
