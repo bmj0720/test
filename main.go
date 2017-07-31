@@ -2,11 +2,12 @@ package main
 
 import (
 	"encoding/xml"
+	"os"
+
+	"github.com/bndr/gojenkins"
 	// "os"
 
 	"fmt"
-
-	"github.com/bndr/gojenkins"
 )
 
 var (
@@ -30,8 +31,8 @@ type InnerJob struct {
 func main() {
 	// cliTest()
 	// beego.Run()
-	// TestInit()
-	// // TestGetAllJobs()
+	TestInit()
+	TestGetAllJobs()
 	// TestCreateJobs()
 }
 
@@ -43,6 +44,10 @@ func TestInit() {
 	} else {
 		fmt.Errorf("Jenkins Initialization fail", err)
 	}
+	// code, _ := jenkins.Poll()
+	// fmt.Println(code)
+	// jenkins, _ := jenkins.Info()
+	// fmt.Println(jenkins)
 }
 
 func TestGetAllJobs() {
@@ -82,7 +87,7 @@ func getFolderJobs(jobs []gojenkins.InnerJob, prefix string, nodeName string) {
 }
 
 func TestCreateJobs() {
-	jobID := "testXML03"
+	jobID := "testXML04"
 	job_data := getFileAsString("jobTest.xml")
 	job, err := jenkins.CreateJob(job_data, jobID)
 	if err != nil {
@@ -270,7 +275,7 @@ func createXml() []byte {
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
-	// os.Stdout.Write([]byte(xml.Header))
-	//  os.Stdout.Write(output)
+	os.Stdout.Write([]byte(xml.Header))
+	os.Stdout.Write(output)
 	return output
 }

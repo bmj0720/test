@@ -8,6 +8,12 @@
   version = "v1.8.3"
 
 [[projects]]
+  name = "github.com/bndr/gojenkins"
+  packages = ["."]
+  revision = "668c6a1cb16b659ece2e90506e643ea16abc712c"
+  version = "v1.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/gopherjs/gopherjs"
   packages = ["js"]
@@ -34,6 +40,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "eba7e98be3bf7e05661ea4bb05bf3d41dc20bfb9210edef310c12b03ab7dec06"
+  inputs-digest = "0bc081263d6254ba739ca5874aa438cecdbdf1343ad237cfdd2a9b6e31df65fb"
   solver-name = "gps-cdcl"
   solver-version = 1
