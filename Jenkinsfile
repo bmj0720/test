@@ -67,7 +67,7 @@ podTemplate(
         ),
     ]
 ) {
-    node('test-bmj') {// 这个地方表面使用demo-job-echo的标签的node
+    node('test-bmj') {// podTemplate 的label
         stage('Checkout') {
             sh 'echo hello world'
             checkout scm//获取代码
