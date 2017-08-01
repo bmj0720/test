@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/bndr/gojenkins"
-	// "os"
 
 	"fmt"
 )
@@ -32,7 +31,7 @@ func main() {
 	// cliTest()
 	// beego.Run()
 	TestInit()
-	TestGetAllJobs()
+	// TestGetAllJobs()
 	// TestCreateJobs()
 }
 
@@ -44,6 +43,18 @@ func TestInit() {
 	} else {
 		fmt.Errorf("Jenkins Initialization fail", err)
 	}
+	jobs, err := jenkins.GetAllJobs()
+	if err != nil {
+		fmt.Println("GetAllJobNames went wrong")
+		return
+	}
+	fmt.Println(jobs)
+	job := jobs[2]
+	build, _ := job.GetBuild(15)
+
+	context := build.GetConsoleOutput()
+	// context := build.GetConsoleOutputByNum()
+	fmt.Println(context)
 	// code, _ := jenkins.Poll()
 	// fmt.Println(code)
 	// jenkins, _ := jenkins.Info()

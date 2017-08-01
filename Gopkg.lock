@@ -10,7 +10,7 @@
 [[projects]]
   name = "github.com/bndr/gojenkins"
   packages = ["."]
-  revision = "668c6a1cb16b659ece2e90506e643ea16abc712c"
+  revision = "e2c1f8c9cc02cd5fcb48cca5a8dcfa0e138ea40e"
   version = "v1.0"
 
 [[projects]]
@@ -55,9 +55,15 @@
   revision = "69483b4bd14f5845b5a1e55bca19e954e827f1d0"
   version = "v1.1.4"
 
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/net"
+  packages = ["html","html/atom"]
+  revision = "f5079bd7f6f74e23c4d65efa0f4ce14cbd6a3c0f"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0bc081263d6254ba739ca5874aa438cecdbdf1343ad237cfdd2a9b6e31df65fb"
+  inputs-digest = "3e9d9d6c90f02c1ab857e06ab1fdd41a22b2b17e85102f35cbfe75c50867c35f"
   solver-name = "gps-cdcl"
   solver-version = 1

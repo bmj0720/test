@@ -1,17 +1,18 @@
 package gojenkins
 
 import (
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
-	"testing"
 	"math/rand"
+	"os"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
 	jenkins *Jenkins
 )
-
 
 func TestInit(t *testing.T) {
 	jenkins = CreateJenkins("http://localhost:8080", "admin", "admin")
@@ -21,15 +22,17 @@ func TestInit(t *testing.T) {
 
 func TestCreateJobs(t *testing.T) {
 	job1ID := "Job1_test"
-	job2ID := "Job2_test"
+	job2ID := "job2_test"
 	job_data := getFileAsString("job.xml")
 
-	job1, _  := jenkins.CreateJob(job_data, job1ID)
+	job1, err := jenkins.CreateJob(job_data, job1ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, job1)
 	assert.Equal(t, "Some Job Description", job1.GetDescription())
 	assert.Equal(t, job1ID, job1.GetName())
 
-
-	job2, _  :=  jenkins.CreateJob(job_data, job2ID)
+	job2, _ := jenkins.CreateJob(job_data, job2ID)
+	assert.NotNil(t, job2)
 	assert.Equal(t, "Some Job Description", job2.GetDescription())
 	assert.Equal(t, job2ID, job2.GetName())
 }
@@ -38,18 +41,25 @@ func TestCreateNodes(t *testing.T) {
 
 	id1 := "node1_test"
 	id2 := "node2_test"
+	id3 := "node3_test"
 
-	node1, _  := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins")
+	jnlp := map[string]string{"method": "JNLPLauncher"}
+	ssh := map[string]string{"method": "SSHLauncher"}
+
+	node1, _ := jenkins.CreateNode(id1, 1, "Node 1 Description", "/var/lib/jenkins", "", jnlp)
 	assert.Equal(t, id1, node1.GetName())
 
-	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins")
+	node2, _ := jenkins.CreateNode(id2, 1, "Node 2 Description", "/var/lib/jenkins", "jdk8 docker", ssh)
 	assert.Equal(t, id2, node2.GetName())
+
+	node3, _ := jenkins.CreateNode(id3, 1, "Node 3 Description", "/var/lib/jenkins", "jdk7")
+	assert.Equal(t, id3, node3.GetName())
 }
 
 func TestCreateBuilds(t *testing.T) {
 	jobs, _ := jenkins.GetAllJobs()
 	for _, item := range jobs {
-		item.InvokeSimple(map[string]string{"param1":"param1"})
+		item.InvokeSimple(map[string]string{"param1": "param1"})
 		item.Poll()
 		isQueued, _ := item.IsQueued()
 		assert.Equal(t, true, isQueued)
@@ -60,6 +70,15 @@ func TestCreateBuilds(t *testing.T) {
 		assert.True(t, (len(builds) > 0))
 
 	}
+}
+
+func TestParseBuildHistory(t *testing.T) {
+	r, err := os.Open("_tests/build_history.txt")
+	if err != nil {
+		panic(err)
+	}
+	history := parseBuildHistory(r)
+	assert.True(t, len(history) == 3)
 }
 
 func TestCreateViews(t *testing.T) {
@@ -85,7 +104,7 @@ func TestGetAllJobs(t *testing.T) {
 
 func TestGetAllNodes(t *testing.T) {
 	nodes, _ := jenkins.GetAllNodes()
-	assert.Equal(t, 3, len(nodes))
+	assert.Equal(t, 4, len(nodes))
 	assert.Equal(t, nodes[0].GetName(), "master")
 }
 
@@ -98,6 +117,31 @@ func TestGetAllBuilds(t *testing.T) {
 	assert.Equal(t, 1, len(builds))
 }
 
+func TestGetLabel(t *testing.T) {
+	label, err := jenkins.GetLabel("test_label")
+	assert.Nil(t, err)
+	assert.Equal(t, label.GetName(), "test_label")
+	assert.Equal(t, 0, len(label.GetNodes()))
+
+	label, err = jenkins.GetLabel("jdk7")
+	assert.Nil(t, err)
+	assert.Equal(t, label.GetName(), "jdk7")
+	assert.Equal(t, 1, len(label.GetNodes()))
+	assert.Equal(t, "node3_test", label.GetNodes()[0].NodeName)
+
+	label, err = jenkins.GetLabel("jdk8")
+	assert.Nil(t, err)
+	assert.Equal(t, label.GetName(), "jdk8")
+	assert.Equal(t, 1, len(label.GetNodes()))
+	assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
+
+	label, err = jenkins.GetLabel("docker")
+	assert.Nil(t, err)
+	assert.Equal(t, label.GetName(), "docker")
+	assert.Equal(t, 1, len(label.GetNodes()))
+	assert.Equal(t, "node2_test", label.GetNodes()[0].NodeName)
+}
+
 func TestBuildMethods(t *testing.T) {
 	job, _ := jenkins.GetJob("Job1_test")
 	build, _ := job.GetLastBuild()
@@ -108,14 +152,31 @@ func TestBuildMethods(t *testing.T) {
 func TestGetSingleJob(t *testing.T) {
 	job, _ := jenkins.GetJob("Job1_test")
 	isRunning, _ := job.IsRunning()
-	config, _ := job.GetConfig()
+	config, err := job.GetConfig()
+	assert.Nil(t, err)
 	assert.Equal(t, false, isRunning)
 	assert.Contains(t, config, "<project>")
 }
 
+func TestEnableDisableJob(t *testing.T) {
+	job, _ := jenkins.GetJob("Job1_test")
+	result, _ := job.Disable()
+	assert.Equal(t, true, result)
+	result, _ = job.Enable()
+	assert.Equal(t, true, result)
+}
+
+func TestCopyDeleteJob(t *testing.T) {
+	job, _ := jenkins.GetJob("Job1_test")
+	jobCopy, _ := job.Copy("Job1_test_copy")
+	assert.Equal(t, jobCopy.GetName(), "Job1_test_copy")
+	jobDelete, _ := job.Delete()
+	assert.Equal(t, true, jobDelete)
+}
+
 func TestGetPlugins(t *testing.T) {
 	plugins, _ := jenkins.GetPlugins(3)
-	assert.Equal(t, 19, plugins.Count())
+	assert.Equal(t, 5, plugins.Count())
 }
 
 func TestGetViews(t *testing.T) {
@@ -132,6 +193,63 @@ func TestGetSingleView(t *testing.T) {
 	assert.Equal(t, view2.Raw.Name, "test_list_view")
 }
 
+func TestCreateFolder(t *testing.T) {
+	folder1ID := "folder1_test"
+	folder2ID := "folder2_test"
+
+	folder1, err := jenkins.CreateFolder(folder1ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, folder1)
+	assert.Equal(t, folder1ID, folder1.GetName())
+
+	folder2, err := jenkins.CreateFolder(folder2ID, folder1ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, folder2)
+	assert.Equal(t, folder2ID, folder2.GetName())
+}
+
+func TestCreateJobInFolder(t *testing.T) {
+	jobName := "Job_test"
+	job_data := getFileAsString("job.xml")
+
+	job1, err := jenkins.CreateJobInFolder(job_data, jobName, "folder1_test")
+	assert.Nil(t, err)
+	assert.NotNil(t, job1)
+	assert.Equal(t, "Some Job Description", job1.GetDescription())
+	assert.Equal(t, jobName, job1.GetName())
+
+	job2, err := jenkins.CreateJobInFolder(job_data, jobName, "folder1_test", "folder2_test")
+	assert.Nil(t, err)
+	assert.NotNil(t, job2)
+	assert.Equal(t, "Some Job Description", job2.GetDescription())
+	assert.Equal(t, jobName, job2.GetName())
+}
+
+func TestGetFolder(t *testing.T) {
+	folder1ID := "folder1_test"
+	folder2ID := "folder2_test"
+
+	folder1, err := jenkins.GetFolder(folder1ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, folder1)
+	assert.Equal(t, folder1ID, folder1.GetName())
+
+	folder2, err := jenkins.GetFolder(folder2ID, folder1ID)
+	assert.Nil(t, err)
+	assert.NotNil(t, folder2)
+	assert.Equal(t, folder2ID, folder2.GetName())
+}
+
+func TestConcurrentRequests(t *testing.T) {
+	for i := 0; i <= 16; i++ {
+		go func() {
+			jenkins.GetAllJobs()
+			jenkins.GetAllViews()
+			jenkins.GetAllNodes()
+		}()
+	}
+}
+
 func getFileAsString(path string) string {
 	buf, err := ioutil.ReadFile("_tests/" + path)
 	if err != nil {
@@ -145,9 +263,9 @@ func getRandomString(n int) string {
 	rand.Seed(time.Now().UnixNano())
 	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-    b := make([]rune, n)
-    for i := range b {
-        b[i] = letters[rand.Intn(len(letters))]
-    }
-    return string(b)
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }

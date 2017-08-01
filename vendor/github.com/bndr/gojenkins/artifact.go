@@ -35,13 +35,13 @@ type Artifact struct {
 // Get raw byte data of Artifact
 func (a Artifact) GetData() ([]byte, error) {
 	var data string
-	_, err := a.Jenkins.Requester.Get(a.Path, &data, nil)
+	response, err := a.Jenkins.Requester.Get(a.Path, &data, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
-	code := a.Jenkins.Requester.LastResponse.StatusCode
+	code := response.StatusCode
 	if code != 200 {
 		Error.Printf("Jenkins responded with StatusCode: %d", code)
 		return nil, errors.New("Could not get File Contents")
@@ -89,7 +89,7 @@ func (a Artifact) validateDownload(path string) (bool, error) {
 
 	fp := Fingerprint{Jenkins: a.Jenkins, Base: "/fingerprint/", Id: localHash, Raw: new(fingerPrintResponse)}
 
-	valid , err := fp.ValidateForBuild(a.FileName, a.Build)
+	valid, err := fp.ValidateForBuild(a.FileName, a.Build)
 
 	if err != nil {
 		return false, err
