@@ -28,6 +28,7 @@ type InnerJob struct {
 
 //
 func main() {
+
 	// cliTest()
 	// beego.Run()
 	TestInit()
@@ -52,7 +53,7 @@ func TestInit() {
 	job := jobs[2]
 	build, _ := job.GetBuild(15)
 
-	context := build.GetConsoleOutput()
+	context := build.GetProgressiveHtml()
 	// context := build.GetConsoleOutputByNum()
 	fmt.Println(context)
 	// code, _ := jenkins.Poll()

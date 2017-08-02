@@ -212,6 +212,13 @@ func (b *Build) GetConsoleOutput() string {
 	return content
 }
 
+func (b *Build) GetProgressiveHtml() string {
+	url := b.Base + "/logText/progressiveHtml"
+	var content string
+	b.Jenkins.Requester.Get(url, &content, nil)
+	return content
+}
+
 func (b *Build) GetCauses() ([]map[string]interface{}, error) {
 	_, err := b.Poll()
 	if err != nil {
