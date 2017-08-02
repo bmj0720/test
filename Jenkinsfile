@@ -108,12 +108,13 @@ podTemplate(
                          set -e
                          
                          cd ${WORKDIR}
+
                          
                          pwd
                          echo "Run e2e test"
                          
                          ./test &
-                         
+
                      ''')
                      
                     //# get host ip

@@ -15,14 +15,16 @@
 package gojenkins
 
 import (
+	"bytes"
 	"errors"
+	"net/url"
 	"regexp"
 	"strconv"
 	"time"
 )
 
 type Build struct {
-	Raw     *buildResponse
+	Raw     *BuildResponse
 	Job     *Job
 	Jenkins *Jenkins
 	Base    string
@@ -39,16 +41,16 @@ type branch struct {
 	Name string
 }
 
-type buildRevision struct {
+type BuildRevision struct {
 	SHA1   string   `json:"SHA1"`
 	Branch []branch `json:"branch"`
 }
 
-type builds struct {
+type Builds struct {
 	BuildNumber int64         `json:"buildNumber"`
 	BuildResult interface{}   `json:"buildResult"`
-	Marked      buildRevision `json:"marked"`
-	Revision    buildRevision `json:"revision"`
+	Marked      BuildRevision `json:"marked"`
+	Revision    BuildRevision `json:"revision"`
 }
 
 type culprit struct {
@@ -59,8 +61,8 @@ type culprit struct {
 type generalObj struct {
 	Parameters              []parameter              `json:"parameters"`
 	Causes                  []map[string]interface{} `json:"causes"`
-	BuildsByBranchName      map[string]builds        `json:"buildsByBranchName"`
-	LastBuiltRevision       buildRevision            `json:"lastBuiltRevision"`
+	BuildsByBranchName      map[string]Builds        `json:"buildsByBranchName"`
+	LastBuiltRevision       BuildRevision            `json:"lastBuiltRevision"`
 	RemoteUrls              []string                 `json:"remoteUrls"`
 	ScmName                 string                   `json:"scmName"`
 	MercurialNodeName       string                   `json:"mercurialNodeName"`
@@ -70,7 +72,7 @@ type generalObj struct {
 	UrlName                 string
 }
 
-type testResult struct {
+type TestResult struct {
 	Duration  int64 `json:"duration"`
 	Empty     bool  `json:"empty"`
 	FailCount int64 `json:"failCount"`
@@ -100,7 +102,7 @@ type testResult struct {
 	} `json:"suites"`
 }
 
-type buildResponse struct {
+type BuildResponse struct {
 	Actions   []generalObj
 	Artifacts []struct {
 		DisplayPath  string `json:"displayPath"`
@@ -142,6 +144,7 @@ type buildResponse struct {
 	ID                string      `json:"id"`
 	KeepLog           bool        `json:"keepLog"`
 	Number            int64       `json:"number"`
+	QueueId           int64       `json:"queueId"`
 	Result            string      `json:"result"`
 	Timestamp         int64       `json:"timestamp"`
 	URL               string      `json:"url"`
@@ -151,11 +154,11 @@ type buildResponse struct {
 	Runs              []struct {
 		Number int64
 		Url    string
-	} `json:"runs`
+	} `json:"runs"`
 }
 
 // Builds
-func (b *Build) Info() *buildResponse {
+func (b *Build) Info() *BuildResponse {
 	return b.Raw
 }
 
@@ -193,11 +196,11 @@ func (b *Build) GetCulprits() []culprit {
 
 func (b *Build) Stop() (bool, error) {
 	if b.IsRunning() {
-		_, err := b.Jenkins.Requester.GetJSON(b.Base+"/stop", nil, nil)
+		response, err := b.Jenkins.Requester.Post(b.Base+"/stop", nil, nil, nil)
 		if err != nil {
 			return false, err
 		}
-		return b.Jenkins.Requester.LastResponse.StatusCode == 200, nil
+		return response.StatusCode == 200, nil
 	}
 	return true, nil
 }
@@ -206,6 +209,13 @@ func (b *Build) GetConsoleOutput() string {
 	url := b.Base + "/consoleText"
 	var content string
 	b.Jenkins.Requester.GetXML(url, &content, nil)
+	return content
+}
+
+func (b *Build) GetProgressiveHtml() string {
+	url := b.Base + "/logText/progressiveHtml"
+	var content string
+	b.Jenkins.Requester.Get(url, &content, nil)
 	return content
 }
 
@@ -231,26 +241,39 @@ func (b *Build) GetParameters() []parameter {
 	return nil
 }
 
+func (b *Build) GetInjectedEnvVars() (map[string]string, error) {
+	var envVars struct {
+		EnvMap map[string]string `json:"envMap"`
+	}
+	endpoint := b.Base + "/injectedEnvVars"
+	_, err := b.Jenkins.Requester.GetJSON(endpoint, &envVars, nil)
+	if err != nil {
+		return envVars.EnvMap, err
+	}
+	return envVars.EnvMap, nil
+}
+
 func (b *Build) GetDownstreamBuilds() ([]*Build, error) {
-	downstreamJobs := b.GetDownstreamJobNames()
-	fingerprints := b.GetAllFingerprints()
 	result := make([]*Build, 0)
-	for _, fingerprint := range fingerprints {
-		for _, usage := range fingerprint.Raw.Usage {
-			if inSlice(usage.Name, downstreamJobs) {
-				job, err := b.Jenkins.GetJob(usage.Name)
-				if err != nil {
-					return nil, err
-				}
-				for _, ranges := range usage.Ranges.Ranges {
-					for i := ranges.Start; i <= ranges.End; i++ {
-						build, err := job.GetBuild(i)
-						if err != nil {
-							return nil, err
-						}
-						result = append(result, build)
-					}
-				}
+	downstreamJobs, err := b.Job.GetDownstreamJobs()
+	if err != nil {
+		return nil, err
+	}
+	for _, job := range downstreamJobs {
+		allBuildIds, err := job.GetAllBuildIds()
+		if err != nil {
+			return nil, err
+		}
+		for _, buildId := range allBuildIds {
+			build, err := job.GetBuild(buildId.Number)
+			if err != nil {
+				return nil, err
+			}
+			upstreamBuild, _ := build.GetUpstreamBuild()
+			// cannot compare only id, it can be from different job
+			if b.GetUrl() == upstreamBuild.GetUrl() {
+				result = append(result, build)
+				break
 			}
 		}
 	}
@@ -302,7 +325,12 @@ func (b *Build) GetUpstreamBuildNumber() (int64, error) {
 	}
 	if len(causes) > 0 {
 		if build, ok := causes[0]["upstreamBuild"]; ok {
-			return build.(int64), nil
+			switch t := build.(type) {
+			default:
+				return t.(int64), nil
+			case float64:
+				return int64(t), nil
+			}
 		}
 	}
 	return 0, nil
@@ -329,23 +357,19 @@ func (b *Build) GetMatrixRuns() ([]*Build, error) {
 	}
 	runs := b.Raw.Runs
 	result := make([]*Build, len(b.Raw.Runs))
-	r, _ := regexp.Compile("/job/" + b.Job.GetName() + "/label=(.*?)/(\\d+)/")
+	r, _ := regexp.Compile("job/(.*?)/(.*?)/(\\d+)/")
+
 	for i, run := range runs {
-		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(buildResponse), Depth: 1, Base: r.FindString(run.Url)}
+		result[i] = &Build{Jenkins: b.Jenkins, Job: b.Job, Raw: new(BuildResponse), Depth: 1, Base: "/" + r.FindString(run.Url)}
 		result[i].Poll()
 	}
 	return result, nil
 }
 
-func (b *Build) GetResultSet() (*testResult, error) {
+func (b *Build) GetResultSet() (*TestResult, error) {
 
-	for _, a := range b.Raw.Actions {
-		if a.TotalCount == 0 && a.UrlName == "" {
-			return nil, errors.New("No Result sets found")
-		}
-	}
 	url := b.Base + "/testReport"
-	var report testResult
+	var report TestResult
 
 	_, err := b.Jenkins.Requester.GetJSON(url, &report, nil)
 	if err != nil {
@@ -383,11 +407,11 @@ func (b *Build) GetRevision() string {
 	return ""
 }
 
-func (b *Build) GetRevistionBranch() string {
+func (b *Build) GetRevisionBranch() string {
 	vcs := b.Raw.ChangeSet.Kind
 	if vcs == "git" {
 		for _, a := range b.Raw.Actions {
-			if a.LastBuiltRevision.Branch[0].SHA1 != "" {
+			if len(a.LastBuiltRevision.Branch) > 0 && a.LastBuiltRevision.Branch[0].SHA1 != "" {
 				return a.LastBuiltRevision.Branch[0].SHA1
 			}
 		}
@@ -409,10 +433,21 @@ func (b *Build) IsRunning() bool {
 	return b.Raw.Building
 }
 
+func (b *Build) SetDescription(description string) error {
+	data := url.Values{}
+	data.Set("description", description)
+	if _, err := b.Jenkins.Requester.Post(b.Base+"/submitDescription", bytes.NewBufferString(data.Encode()), nil, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Poll for current data. Optional parameter - depth.
 // More about depth here: https://wiki.jenkins-ci.org/display/JENKINS/Remote+access+API
 func (b *Build) Poll(options ...interface{}) (int, error) {
-	depth := strconv.Itoa(b.Depth)
+	depth := "-1"
+
 	for _, o := range options {
 		switch v := o.(type) {
 		case string:
@@ -423,12 +458,16 @@ func (b *Build) Poll(options ...interface{}) (int, error) {
 			depth = strconv.FormatInt(v, 10)
 		}
 	}
+	if depth == "-1" {
+		depth = strconv.Itoa(b.Depth)
+	}
+
 	qr := map[string]string{
 		"depth": depth,
 	}
-	_, err := b.Jenkins.Requester.GetJSON(b.Base, b.Raw, qr)
+	response, err := b.Jenkins.Requester.GetJSON(b.Base, b.Raw, qr)
 	if err != nil {
 		return 0, err
 	}
-	return b.Jenkins.Requester.LastResponse.StatusCode, nil
+	return response.StatusCode, nil
 }
