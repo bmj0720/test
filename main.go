@@ -52,7 +52,7 @@ func TestInit() {
 	fmt.Println(jobs)
 	job := jobs[2]
 	build, _ := job.GetBuild(15)
-
+	// build.IsRunning()
 	context := build.GetProgressiveHtml()
 	// context := build.GetConsoleOutputByNum()
 	fmt.Println(context)
